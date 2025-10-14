@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "393874452177",
+    "project_id": "worksync-19b47",
+    "storage_bucket": "worksync-19b47.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:393874452177:android:4dedff3d12539ecbf39ff0",
+        "android_client_info": {
+          "package_name": "com.worksync.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCimKcNLnA1MmTM_owr2Pc3CC3Ch_13la8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
