@@ -8,7 +8,7 @@ import com.worksync.app.domain.model.Task
 import com.worksync.app.domain.model.enums.TaskPriority
 import com.worksync.app.domain.model.enums.TaskStatus
 
-class Converters {
+class TaskConverters {
     @TypeConverter
     fun fromStringList(value: List<String>): String {
         return value.joinToString(",")
@@ -41,7 +41,7 @@ class Converters {
 }
 
 @Entity(tableName = "tasks")
-@TypeConverters(Converters::class)
+@TypeConverters(TaskConverters::class)
 data class TaskEntity(
     @PrimaryKey
     val id: String,

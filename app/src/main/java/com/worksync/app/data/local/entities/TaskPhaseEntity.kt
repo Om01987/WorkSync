@@ -2,6 +2,7 @@ package com.worksync.app.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.worksync.app.domain.model.TaskPhase
 
@@ -14,7 +15,8 @@ import com.worksync.app.domain.model.TaskPhase
             childColumns = ["taskId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["taskId"])]
 )
 data class TaskPhaseEntity(
     @PrimaryKey

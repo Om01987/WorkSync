@@ -71,6 +71,9 @@ dependencies {
 
     // Material Design 3 (no version because BOM manages it)
     implementation("androidx.compose.material3:material3")
+    // Material icons (full set, includes Visibility/VisibilityOff)
+    implementation("androidx.compose.material:material-icons-extended")
+
     // Optional window size utilities from Material3 (BOM-managed)
     implementation("androidx.compose.material3:material3-window-size-class")
 
@@ -87,6 +90,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.57.1")
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
 
     // Room Database (use latest stable 2.8.x)
     implementation("androidx.room:room-runtime:2.8.2")
