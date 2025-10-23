@@ -2,14 +2,15 @@ package com.worksync.app.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
 import com.worksync.app.domain.model.User
 import com.worksync.app.domain.model.enums.UserRole
-import com.worksync.app.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class UserUiState(
@@ -21,27 +22,48 @@ data class UserUiState(
 
 @HiltViewModel
 class UserViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val firestore: FirebaseFirestore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserUiState())
     val uiState: StateFlow<UserUiState> = _uiState.asStateFlow()
 
-    // Force a remote pull, then start collecting employees from Room
+    companion object {
+        private const val USERS_COLLECTION = "users"
+    }
+
+    // Fetch employees directly from Firestore
     fun loadEmployees() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
-                // Pull latest users from Firestore to local cache
-                userRepository.syncUsers()
-                // Now collect employees from DAO-backed flow
-                userRepository.getUsersByRole(UserRole.EMPLOYEE).collect { employees ->
-                    _uiState.value = _uiState.value.copy(
-                        employees = employees,
-                        isLoading = false,
-                        errorMessage = null
-                    )
+                val snapshot = firestore.collection(USERS_COLLECTION)
+                    .whereEqualTo("role", UserRole.EMPLOYEE.name)
+                    .whereEqualTo("isActive", true)
+                    .get()
+                    .await()
+
+                val employees = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        User(
+                            id = doc.getString("id") ?: doc.id,
+                            email = doc.getString("email") ?: "",
+                            name = doc.getString("name") ?: "",
+                            role = UserRole.valueOf(doc.getString("role") ?: "EMPLOYEE"),
+                            profileImageUrl = doc.getString("profileImageUrl"),
+                            createdAt = doc.getLong("createdAt") ?: 0L,
+                            isActive = doc.getBoolean("isActive") ?: true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
+
+                _uiState.value = _uiState.value.copy(
+                    employees = employees,
+                    isLoading = false,
+                    errorMessage = if (employees.isEmpty()) "No employees found" else null
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -51,18 +73,37 @@ class UserViewModel @Inject constructor(
         }
     }
 
+    // Fetch all active users directly from Firestore
     fun loadAllUsers() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
-                userRepository.syncUsers()
-                userRepository.getAllActiveUsers().collect { users ->
-                    _uiState.value = _uiState.value.copy(
-                        allUsers = users,
-                        isLoading = false,
-                        errorMessage = null
-                    )
+                val snapshot = firestore.collection(USERS_COLLECTION)
+                    .whereEqualTo("isActive", true)
+                    .get()
+                    .await()
+
+                val users = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        User(
+                            id = doc.getString("id") ?: doc.id,
+                            email = doc.getString("email") ?: "",
+                            name = doc.getString("name") ?: "",
+                            role = UserRole.valueOf(doc.getString("role") ?: "EMPLOYEE"),
+                            profileImageUrl = doc.getString("profileImageUrl"),
+                            createdAt = doc.getLong("createdAt") ?: 0L,
+                            isActive = doc.getBoolean("isActive") ?: true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
+
+                _uiState.value = _uiState.value.copy(
+                    allUsers = users,
+                    isLoading = false,
+                    errorMessage = if (users.isEmpty()) "No users found" else null
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -72,19 +113,8 @@ class UserViewModel @Inject constructor(
         }
     }
 
-    // Manual one-shot refresh to pull from Firestore (used by dialog Refresh button)
+    // Refresh employees (same as loadEmployees)
     fun refreshEmployeesOnce() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            try {
-                userRepository.syncUsers()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message ?: "Refresh failed"
-                )
-            }
-        }
+        loadEmployees()
     }
 }

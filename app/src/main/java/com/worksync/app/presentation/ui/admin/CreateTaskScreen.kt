@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -169,30 +170,65 @@ fun CreateTaskScreen(
                 onDismissRequest = { showEmployeeDialog = false },
                 title = { Text("Select Employee") },
                 text = {
-                    Column {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         if (userUiState.isLoading) {
                             CircularProgressIndicator()
+                            Text(
+                                "Loading employees...",
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        } else if (userUiState.errorMessage != null) {
+                            Text(
+                                text = userUiState.errorMessage!!,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            OutlinedButton(onClick = { userViewModel.refreshEmployeesOnce() }) {
+                                Text("Retry")
+                            }
                         } else if (userUiState.employees.isEmpty()) {
-                            Text("No employees found. Please register employees first or refresh.")
+                            Text("No employees found. Please register employees with EMPLOYEE role first.")
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(onClick = { userViewModel.refreshEmployeesOnce() }) {
                                 Text("Refresh")
                             }
                         } else {
-                            userUiState.employees.forEach { employee ->
-                                TextButton(
-                                    onClick = {
-                                        selectedEmployee = employee
-                                        showEmployeeDialog = false
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "${employee.name} (${employee.email})",
+                            Text(
+                                "Found ${userUiState.employees.size} employees",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                userUiState.employees.forEach { employee ->
+                                    TextButton(
+                                        onClick = {
+                                            selectedEmployee = employee
+                                            showEmployeeDialog = false
+                                        },
                                         modifier = Modifier.fillMaxWidth()
-                                    )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalAlignment = Alignment.Start
+                                        ) {
+                                            Text(
+                                                text = employee.name,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = employee.email,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    if (employee != userUiState.employees.last()) {
+                                        HorizontalDivider()
+                                    }
                                 }
-                                Divider()
                             }
                         }
                     }
