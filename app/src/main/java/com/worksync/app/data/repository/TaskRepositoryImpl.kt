@@ -7,6 +7,7 @@ import com.worksync.app.data.local.dao.TaskPhaseDao
 import com.worksync.app.data.local.entities.toEntity
 import com.worksync.app.domain.model.Task
 import com.worksync.app.domain.model.TaskPhase
+import com.worksync.app.domain.model.enums.TaskPriority
 import com.worksync.app.domain.model.enums.TaskStatus
 import com.worksync.app.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow

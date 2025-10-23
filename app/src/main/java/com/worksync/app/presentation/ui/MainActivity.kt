@@ -4,32 +4,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel // <-- fixed import
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.worksync.app.domain.model.enums.UserRole
 import com.worksync.app.presentation.navigation.NavigationRoutes
+import com.worksync.app.presentation.ui.admin.AdminDashboardScreen
+import com.worksync.app.presentation.ui.admin.CreateTaskScreen
+import com.worksync.app.presentation.ui.admin.TaskDetailsScreen
 import com.worksync.app.presentation.ui.auth.LoginScreen
 import com.worksync.app.presentation.ui.auth.RegisterScreen
+import com.worksync.app.presentation.ui.employee.EmployeeDashboardScreen
+import com.worksync.app.presentation.ui.splash.SplashScreen
 import com.worksync.app.presentation.viewmodel.AuthViewModel
 import com.worksync.app.ui.theme.WorkSyncTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -59,23 +57,22 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WorkSyncApp(authViewModel: AuthViewModel = hiltViewModel()) {
     val navController = rememberNavController()
-    val uiState by authViewModel.uiState.collectAsState()
-
-    val startDestination = if (uiState.isLoggedIn) {
-        when (uiState.currentUser?.role) {
-            UserRole.ADMIN -> NavigationRoutes.ADMIN_DASHBOARD
-            UserRole.EMPLOYEE -> NavigationRoutes.EMPLOYEE_DASHBOARD
-            else -> NavigationRoutes.LOGIN
-        }
-    } else {
-        NavigationRoutes.LOGIN
-    }
 
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = NavigationRoutes.SPLASH
     ) {
+        // Splash Screen - determines where to navigate based on auth state
+        composable(NavigationRoutes.SPLASH) {
+            SplashScreen(
+                navController = navController,
+                authViewModel = authViewModel
+            )
+        }
+
+        // Login Screen
         composable(NavigationRoutes.LOGIN) {
+            val uiState by authViewModel.uiState.collectAsState()
             LoginScreen(
                 onNavigateToRegister = { navController.navigate(NavigationRoutes.REGISTER) },
                 onLoginSuccess = {
@@ -91,7 +88,9 @@ fun WorkSyncApp(authViewModel: AuthViewModel = hiltViewModel()) {
             )
         }
 
+        // Register Screen
         composable(NavigationRoutes.REGISTER) {
+            val uiState by authViewModel.uiState.collectAsState()
             RegisterScreen(
                 onNavigateToLogin = {
                     navController.navigate(NavigationRoutes.LOGIN) {
@@ -111,126 +110,81 @@ fun WorkSyncApp(authViewModel: AuthViewModel = hiltViewModel()) {
             )
         }
 
+        // Admin Dashboard
         composable(NavigationRoutes.ADMIN_DASHBOARD) {
-            AdminDashboardPlaceholder(
-                user = uiState.currentUser,
-                onLogout = {
-                    authViewModel.logout()
-                    navController.navigate(NavigationRoutes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
+            val uiState by authViewModel.uiState.collectAsState()
+            uiState.currentUser?.let { user ->
+                AdminDashboardScreen(
+                    currentUser = user,
+                    authViewModel = authViewModel,
+                    taskViewModel = hiltViewModel(),
+                    onLogout = {
+                        authViewModel.logout()
+                        navController.navigate(NavigationRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onCreateTask = {
+                        navController.navigate(NavigationRoutes.CREATE_TASK)
+                    },
+                    onTaskClick = { task ->
+                        navController.navigate("${NavigationRoutes.TASK_DETAILS}/${task.id}")
                     }
-                }
-            )
+                )
+            }
         }
 
+        // Employee Dashboard
         composable(NavigationRoutes.EMPLOYEE_DASHBOARD) {
-            EmployeeDashboardPlaceholder(
-                user = uiState.currentUser,
-                onLogout = {
-                    authViewModel.logout()
-                    navController.navigate(NavigationRoutes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
+            val uiState by authViewModel.uiState.collectAsState()
+            uiState.currentUser?.let { user ->
+                EmployeeDashboardScreen(
+                    currentUser = user,
+                    taskViewModel = hiltViewModel(),
+                    onLogout = {
+                        authViewModel.logout()
+                        navController.navigate(NavigationRoutes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onTaskClick = { task ->
+                        navController.navigate("${NavigationRoutes.TASK_DETAILS}/${task.id}")
                     }
-                }
-            )
+                )
+            }
         }
-    }
-}
 
-@Composable
-fun AdminDashboardPlaceholder(
-    user: com.worksync.app.domain.model.User?,
-    onLogout: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Admin Dashboard",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Welcome, ${user?.name ?: "Admin"}!",
-                fontSize = 18.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "✅ Phase 1: App Setup Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Text(
-                text = "✅ Phase 2: Database Setup Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "✅ Phase 3: Authentication Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.padding(top = 24.dp)
-            ) {
-                Text("Logout")
+        // Create Task Screen (Admin only)
+        composable(NavigationRoutes.CREATE_TASK) {
+            val uiState by authViewModel.uiState.collectAsState()
+            uiState.currentUser?.let { user ->
+                CreateTaskScreen(
+                    currentUser = user,
+                    taskViewModel = hiltViewModel(),
+                    userViewModel = hiltViewModel(),
+                    onNavigateBack = { navController.popBackStack() },
+                    onTaskCreated = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        // Task Details Screen
+        composable(
+            route = "${NavigationRoutes.TASK_DETAILS}/{taskId}",
+            arguments = listOf(navArgument("taskId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val taskId = backStackEntry.arguments?.getString("taskId") ?: ""
+            val uiState by authViewModel.uiState.collectAsState()
+            uiState.currentUser?.let { user ->
+                TaskDetailsScreen(
+                    taskId = taskId,
+                    currentUser = user,
+                    taskViewModel = hiltViewModel(),
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }
-}
-
-@Composable
-fun EmployeeDashboardPlaceholder(
-    user: com.worksync.app.domain.model.User?,
-    onLogout: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Employee Dashboard",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Welcome, ${user?.name ?: "Employee"}!",
-                fontSize = 18.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "✅ Phase 1: App Setup Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-            Text(
-                text = "✅ Phase 2: Database Setup Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Text(
-                text = "✅ Phase 3: Authentication Complete",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.padding(top = 24.dp)
-            ) {
-                Text("Logout")
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun WorkSyncAppPreview() {
-    WorkSyncTheme { }
 }
