@@ -6,11 +6,11 @@ import com.worksync.app.domain.model.Task
 import com.worksync.app.domain.model.TaskPhase
 import com.worksync.app.domain.model.enums.TaskPriority
 import com.worksync.app.domain.model.enums.TaskStatus
+import com.worksync.app.domain.repository.TaskRepository
 import com.worksync.app.domain.usecase.task.CreateTaskUseCase
 import com.worksync.app.domain.usecase.task.DeleteTaskUseCase
 import com.worksync.app.domain.usecase.task.GetTasksUseCase
 import com.worksync.app.domain.usecase.task.UpdateTaskUseCase
-import com.worksync.app.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -150,6 +150,7 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    // Existing status update (kept for compatibility in dashboards)
     fun updateTaskStatus(taskId: String, status: TaskStatus) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -272,6 +273,169 @@ class TaskViewModel @Inject constructor(
     fun syncTasks() {
         viewModelScope.launch {
             taskRepository.syncTasks()
+        }
+    }
+
+    // ===================== Edit Methods (New) =====================
+
+    fun updateTaskStatus(taskId: String, newStatus: TaskStatus, refreshSelected: Boolean = true) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            updateTaskUseCase.updateTaskStatus(taskId, newStatus)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        successMessage = "Status updated to ${newStatus.name}"
+                    )
+                    if (refreshSelected) selectTask(taskId)
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Failed to update status"
+                    )
+                }
+        }
+    }
+
+    fun updateTaskPriority(taskId: String, newPriority: TaskPriority) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value.selectedTask?.let { task ->
+                val updated = task.copy(priority = newPriority, updatedAt = System.currentTimeMillis())
+                updateTaskUseCase.updateTask(updated)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Priority updated to ${newPriority.name}"
+                        )
+                        selectTask(taskId)
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = exception.message ?: "Failed to update priority"
+                        )
+                    }
+            } ?: run {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    fun updateTaskTitle(taskId: String, newTitle: String) {
+        viewModelScope.launch {
+            if (newTitle.isBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Title cannot be empty"
+                )
+                return@launch
+            }
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value.selectedTask?.let { task ->
+                val updated = task.copy(title = newTitle, updatedAt = System.currentTimeMillis())
+                updateTaskUseCase.updateTask(updated)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Title updated"
+                        )
+                        selectTask(taskId)
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = exception.message ?: "Failed to update title"
+                        )
+                    }
+            } ?: run {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    fun updateTaskDescription(taskId: String, newDescription: String) {
+        viewModelScope.launch {
+            if (newDescription.isBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Description cannot be empty"
+                )
+                return@launch
+            }
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value.selectedTask?.let { task ->
+                val updated = task.copy(description = newDescription, updatedAt = System.currentTimeMillis())
+                updateTaskUseCase.updateTask(updated)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Description updated"
+                        )
+                        selectTask(taskId)
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = exception.message ?: "Failed to update description"
+                        )
+                    }
+            } ?: run {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    fun updateTaskDeadline(taskId: String, newDeadline: Long?) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value.selectedTask?.let { task ->
+                val updated = task.copy(deadline = newDeadline, updatedAt = System.currentTimeMillis())
+                updateTaskUseCase.updateTask(updated)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Deadline updated"
+                        )
+                        selectTask(taskId)
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = exception.message ?: "Failed to update deadline"
+                        )
+                    }
+            } ?: run {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    fun updateTaskAssignee(taskId: String, newAssigneeId: String, newAssigneeName: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value.selectedTask?.let { task ->
+                val updated = task.copy(
+                    assignedTo = newAssigneeId,
+                    assignedToName = newAssigneeName,
+                    updatedAt = System.currentTimeMillis()
+                )
+                updateTaskUseCase.updateTask(updated)
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Task reassigned to $newAssigneeName"
+                        )
+                        selectTask(taskId)
+                    }
+                    .onFailure { exception ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = exception.message ?: "Failed to reassign task"
+                        )
+                    }
+            } ?: run {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
         }
     }
 }
